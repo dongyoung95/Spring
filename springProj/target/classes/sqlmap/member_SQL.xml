@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mapper.MemberMapper">
+
+	<resultMap type="memberVO" id="memberMap">
+		<result property="userNo" column="USER_NO"/>
+		<result property="userId" column="USER_ID"/>
+		<result property="userPw" column="USER_PW"/>
+		<result property="userName" column="USER_NAME"/>
+		<result property="coin" column="COIN"/>
+		<result property="regDate" column="REG_DATE"/>
+		<result property="updDate" column="UPD_DATE"/>
+		<result property="enabled" column="ENABLED"/>
+		<collection property="memberAuthVOList" resultMap="memberAuthMap" ></collection>
+	</resultMap>
+	
+	<resultMap type="memberAuthVO" id="memberAuthMap">
+		<result property="userNo" column="USER_NO"/>
+		<result property="auth" column="AUTH"/>
+	</resultMap>
+	
+	<!-- public MemberVO detail(String username) -->
+	<select id="detail" parameterType="String" resultMap="memberMap">
+		SELECT A.USER_NO, A.USER_ID, A.USER_PW, A.USER_NAME, A.COIN
+	        , A.REG_DATE, A.UPD_DATE, A.ENABLED
+	        , B.AUTH
+		FROM MEMBER A, MEMBER_AUTH B
+		WHERE A.USER_NO = B.USER_NO
+		    AND ENABLED = '1'
+		    AND A.USER_ID = #{username}
+	</select>
+
+</mapper>

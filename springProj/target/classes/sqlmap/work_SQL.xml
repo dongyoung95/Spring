@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mapper.WorkMapper">
+	<sql id="where">
+		<if test="keyword!=null and keyword!=''">
+		AND    (
+	               A.E_EMPNO IN(SELECT E_EMPNO FROM EMPLOYEE WHERE E_NAME LIKE '%' || #{keyword} || '%')
+	               OR 
+	               A.B_SITENO IN(SELECT B_SITENO FROM BUSINESS WHERE B_NAME LIKE '%' || #{keyword} || '%')
+	               )
+	    </if>  
+	</sql>
+	<!-- 직원 가져옴 -->
+	<select id="getEmployee" resultType="employeeVO">
+		SELECT E_EMPNO, E_NAME, E_ADDRESS, E_TELNO, E_POSITION, E_DEPT
+		FROM  EMPLOYEE
+		ORDER BY E_NAME
+	</select>
+	
+	<!-- 사업장 가져옴 -->
+	<select id="getBusiness" resultType="businessVO">
+		SELECT B_SITENO, B_NAME, B_ADDRESS, B_TELNO, B_AMOUNT, B_MANQTY, B_STRDATE, B_PREDATE, B_ENDDATE, B_REMARK
+		FROM  BUSINESS
+		ORDER BY B_NAME
+	</select>
+	
+	<!-- 근무테이블 insert 
+	WorkVO [eEmpno=1003, bSiteno=BS0005, wInpdate=Wed Nov 01 00:00:00 KST 2023
+	, wEnddate=Thu Nov 30 00:00:00 KST 2023, wScore=100, workId=WK0001, 
+	uploadFile=[org.springframework.web.multipart.support.StandardMultipartHttpServletRequest$StandardMultipartFile@892ef23, org.springframework.web.multipart.support.StandardMultipartHttpServletRequest$StandardMultipartFile@6362273e, org.springframework.web.multipart.support.StandardMultipartHttpServletRequest$StandardMultipartFile@2f5efbc4]
+	 atchFileDetailVOList=null]
+	-->
+	<insert id="createPost" parameterType="workVO">
+		<selectKey resultType="String" order="BEFORE" keyProperty="workId">
+			SELECT 'WK'||TRIM(TO_CHAR(SUBSTR(NVL(MAX(WORK_ID),'WK0000'),3)+1,'0000')) 
+			FROM   WORK
+		</selectKey>
+		INSERT INTO WORK(E_EMPNO, B_SITENO, W_INPDATE, W_ENDDATE, W_SCORE, WORK_ID)
+		VALUES(#{eEmpno}, #{bSiteno}, #{wInpdate}, #{wEnddate}, #{wScore}, #{workId})
+	</insert>
+	
+	<resultMap type="workVO" id="workMap">
+		<result property="eEmpno" column="E_EMPNO"/>
+		<result property="bSiteno" column="B_SITENO"/>
+		<result property="wInpdate" column="W_INPDATE"/>
+		<result property="wEnddate" column="W_ENDDATE"/>
+		<result property="wScore" column="W_SCORE"/>
+		<result property="workId" column="WORK_ID"/>
+		<collection property="atchFileDetailVOList" resultMap="atchFileDetailMap"></collection>
+	</resultMap>
+	
+	<resultMap type="atchFileDetailVO" id="atchFileDetailMap">
+		<result property="atchFileId" column="ATCH_FILE_ID"/>
+		<result property="fileSn" column="FILE_SN"/>
+		<result property="fileStreCours" column="FILE_STRE_COURS"/>
+		<result property="streFileNm" column="STRE_FILE_NM"/>
+		<result property="orignlFileNm" column="ORIGNL_FILE_NM"/>
+		<result property="fileExtsn" column="FILE_EXTSN"/>
+		<result property="fileCn" column="FILE_CN"/>
+		<result property="fileSize" column="FILE_SIZE"/>
+	</resultMap>
+	
+	<!-- 근무 상세 
+	//..., wEnddate=null, wScore=0, workId=WK0001,...
+	-->
+	<select id="detail" parameterType="workVO" resultMap="workMap">
+		SELECT A.E_EMPNO, A.B_SITENO, A.W_INPDATE, A.W_ENDDATE, A.W_SCORE
+	         , A.WORK_ID
+	         , B.ATCH_FILE_ID, B.FILE_SN, B.FILE_STRE_COURS, B.STRE_FILE_NM
+	         , B.ORIGNL_FILE_NM, B.FILE_EXTSN, B.FILE_CN, B.FILE_SIZE
+		FROM   WORK A, ATCH_FILE_DETAIL B
+		WHERE A.WORK_ID = B.ATCH_FILE_ID(+)
+		AND    WORK_ID = #{workId}
+	</select>
+	
+	<!-- 수정처리 -->
+	<!-- 근무테이블 insert 
+	WorkVO [eEmpno=1003, bSiteno=BS0005, wInpdate=Wed Nov 01 00:00:00 KST 2023
+	, wEnddate=Thu Nov 30 00:00:00 KST 2023, wScore=100, workId=WK0001, 
+	uploadFile=[org.springframework.web.multipart.support.StandardMultipartHttpServletRequest$StandardMultipartFile@892ef23, org.springframework.web.multipart.support.StandardMultipartHttpServletRequest$StandardMultipartFile@6362273e, org.springframework.web.multipart.support.StandardMultipartHttpServletRequest$StandardMultipartFile@2f5efbc4]
+	 atchFileDetailVOList=null]
+	-->
+	<update id="updatePost" parameterType="workVO">
+		UPDATE WORK
+		SET    E_EMPNO=#{eEmpno}, B_SITENO=#{bSiteno}
+			,  W_INPDATE=#{wInpdate}, W_ENDDATE=#{wEnddate}, W_SCORE=#{wScore}
+		WHERE  WORK_ID = #{workId}
+	</update>
+	
+	<!-- 수정 모드에서 첨부파일을 수정하고자 할 때 ATCH_FILE_DETAIL테이블의 데이터를 먼저 삭제함 
+	파라미터 : String atchFileId
+	-->
+	<delete id="delAtch" parameterType="String">
+		DELETE FROM ATCH_FILE_DETAIL
+		WHERE  ATCH_FILE_ID = #{atchFileId}
+	</delete>
+	
+	<!-- 근무테이블 삭제 -->
+	<delete id="deletePost" parameterType="workVO">
+		DELETE FROM WORK
+		WHERE   WORK_ID = #{workId}
+	</delete>
+	
+	<resultMap type="workVO" id="workListMap">
+		<result property="rnum" column="RNUM"/>
+		<result property="eEmpno" column="E_EMPNO"/>
+		<result property="bSiteno" column="B_SITENO"/>
+		<result property="wInpdate" column="W_INPDATE"/>
+		<result property="wEnddate" column="W_ENDDATE"/>
+		<result property="wScore" column="W_SCORE"/>
+		<result property="workId" column="WORK_ID"/>
+		<collection property="employeeVOList" resultMap="employeeMap"></collection>
+		<collection property="businessVOList" resultMap="businessMap"></collection>
+	</resultMap>
+	
+	<resultMap type="employeeVO" id="employeeMap">
+		<result property="eEmpno" column="E_EMPNO"/>
+		<result property="eName" column="E_NAME"/>
+		<result property="eAddress" column="E_ADDRESS"/>
+		<result property="eTelno" column="E_TELNO"/>
+		<result property="ePosition" column="E_POSITION"/>
+		<result property="eDept" column="E_DEPT"/>
+	</resultMap>
+	
+	<resultMap type="businessVO" id="businessMap">
+		<result property="bSiteno" column="B_SITENO"/>
+		<result property="bName" column="B_NAME"/>
+		<result property="bAddress" column="B_ADDRESS"/>
+		<result property="bTelno" column="B_TELNO"/>
+		<result property="bAmount" column="B_AMOUNT"/>
+		<result property="bManqty" column="B_MANQTY"/>
+		<result property="bStrdate" column="B_STRDATE"/>
+		<result property="bPredate" column="B_PREDATE"/>
+		<result property="bEnddate" column="B_ENDDATE"/>
+		<result property="bRemark" column="B_REMARK"/>
+	</resultMap>
+	
+	<!-- 근무 목록 
+	Map{keyword=김덕배,currentPage=1}
+	-->
+	<select id="list" parameterType="hashMap" resultMap="workListMap">
+		SELECT T.*
+		FROM
+		(
+		    SELECT ROW_NUMBER() OVER(ORDER BY B.E_NAME) RNUM 
+		             , A.E_EMPNO, A.B_SITENO, A.W_INPDATE, A.W_ENDDATE, A.W_SCORE, A.WORK_ID
+		             , B.E_NAME, B.E_ADDRESS, B.E_TELNO, B.E_POSITION, B.E_DEPT
+		             , C.B_NAME, C.B_ADDRESS, C.B_TELNO, C.B_AMOUNT
+		             , C.B_MANQTY, C.B_STRDATE, C.B_PREDATE, C.B_ENDDATE, C.B_REMARK
+		    FROM  WORK A, EMPLOYEE B, BUSINESS C
+		    WHERE 1 = 1
+		    AND   A.E_EMPNO = B.E_EMPNO
+		    AND   A.B_SITENO = C.B_SITENO
+		    <include refid="where"></include>
+		) T
+		WHERE T.RNUM BETWEEN (#{currentPage} * 10) - (10 - 1) AND (#{currentPage} * 10)
+	</select>
+	
+	<!-- 전체 행의 수(total) 
+	Map{keyword=김덕배,currentPage=1}
+	-->
+	<select id="getTotal" parameterType="hashMap" resultType="int">
+		SELECT COUNT(*)
+		    FROM  WORK A, EMPLOYEE B, BUSINESS C
+		    WHERE 1 = 1
+		    AND   A.E_EMPNO = B.E_EMPNO
+		    AND   A.B_SITENO = C.B_SITENO
+		    <include refid="where"></include>
+	</select>
+	
+	<!-- 기본키 가져오기 -->
+	<select id="getWorkId" resultType="String">
+		SELECT 'WK'||TRIM(TO_CHAR(SUBSTR(NVL(MAX(WORK_ID),'WK0000'),3)+1,'0000')) 
+		FROM   WORK
+	</select>
+</mapper>
+
+

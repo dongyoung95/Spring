@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="publishing">
+
+	<insert id="insertPub" parameterType="publishingVO">
+	
+		<selectKey resultType="String" order="BEFORE" keyProperty="pubId">
+			SELECT 'PB'||TRIM(TO_CHAR(SUBSTR(NVL(MAX(PUB_ID),'PB0000'),3)+1,'0000')) 
+			FROM PUBLISHING
+		</selectKey>
+
+		INSERT INTO PUBLISHING(PUB_ID, BOOK_ID, WR_ID, PUB_DT, REG_DT)
+		VALUES(#{pubId}, #{bookId}, #{wrId}, #{pubDt}, sysdate)
+	</insert>
+
+</mapper>

@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- namespace : xml파일은 여러개일 수 있음. 
+이를 구별하기 위한 식별 용도로 사용 -->
+<mapper namespace="kr.or.ddit.mapper.BookMapper">
+	<sql id="where">
+		<if test="keyword!=null and keyword!=''">
+			AND      (TITLE	   LIKE '%' || #{keyword} || '%' 
+				   OR CATEGORY LIKE '%' || #{keyword} || '%')
+		</if>
+	</sql>
+	<!-- MyBatis에서 제공해주는 데이터 입력을 나타내는 태그
+	1) 드루와 : Dao 객체가 던진 데이터타입.parameterType만 씀
+	2) 가즈아 : Dao 객체의 메소드 쪽으로 리턴할 타입.
+	  - resultType : vo, hashMap, String, int
+	  - resultMap  : MyBatis의 resultMap 태그를 사용
+	-->
+	<!-- bookVO(전)=>{"bookId":0,"title":"총알탄 개똥이","category":"소설","price":10000,"insertDate":""} -->
+	<!-- bookVO(후)=>{"bookId":1,"title":"총알탄 개똥이","category":"소설","price":10000,"insertDate":""} -->
+	<!-- 마이바티스 쿼리 XML에 전달되면 샵{title}을 "총알탄 개똥이"로 자동 변환함 -->
+	<!-- insert/update/delete의 경우 resultType은 생략(명확한 int타입므로) -->
+	<insert id="createPost" parameterType="bookVO">
+		<!-- 
+		order : BEFORE(쿼리를 실행하기 전에 먼저 selectKey를 실행)
+		resultType : selectKey 쿼리를 실행 한 타입
+		keyProperty : bookVO의 멤버변수(결과를 담을)
+		 -->
+		<selectKey resultType="String" order="BEFORE" keyProperty="bookId">
+			SELECT 'BK' || NVL(TRIM(TO_CHAR(SUBSTR(MAX(BOOK_ID),3) + 1,'0000')),'0001')
+			FROM   BOOK
+		</selectKey>
+	
+		INSERT INTO BOOK(BOOK_ID, TITLE, CATEGORY, PRICE, INSERT_DATE)
+		VALUES(#{bookId},#{title},#{category},#{price},SYSDATE)
+	</insert>
+	
+	<!-- 책 상세보기 
+		select 태그는 조회(select) 쿼리를 실행하기 위한 mybatis 태그.
+		parameterType(book_SQL.xml로 드루와) : bookVO 타입
+		resultType(BookDAO로 가즈아) : bookVO 타입
+	-->
+	<!-- R(Relational-관계형)DB
+	들어옴 : bookVO{bookId:15,title=null,category=null,price:0,insertDate=null}
+	나갈땐 : bookVO{bookId:15,title=제목15,category=카테고리15,price:15000,insertDate=23/10/24}
+	 -->
+	<resultMap type="bookVO" id="bookMap">
+		<result property="bookId" column="BOOK_ID"/>
+		<result property="title" column="TITLE"/>
+		<result property="category" column="CATEGORY"/>
+		<result property="price" column="PRICE"/>
+		<result property="insertDate" column="INSERT_DATE"/>
+		<result property="content" column="CONTENT"/>
+		<collection property="atchFileDetailVOList" resultMap="atchFileDetailMap"></collection>
+	</resultMap>
+	
+	<resultMap type="atchFileDetailVO" id="atchFileDetailMap">
+		<result property="atchFileId" column="ATCH_FILE_ID"/>
+		<result property="fileSn" column="FILE_SN"/>
+		<result property="fileStreCours" column="FILE_STRE_COURS"/>
+		<result property="streFileNm" column="STRE_FILE_NM"/>
+		<result property="orignlFileNm" column="ORIGNL_FILE_NM"/>
+		<result property="fileExtsn" column="FILE_EXTSN"/>
+		<result property="fileCn" column="FILE_CN"/>
+		<result property="fileSize" column="FILE_SIZE"/>
+	</resultMap>
+	 
+	<select id="detail" parameterType="bookVO" resultMap="bookMap">
+		SELECT A.BOOK_ID, A.TITLE, A.CATEGORY, A.PRICE, A.INSERT_DATE
+	         , A.CONTENT
+	         , B.ATCH_FILE_ID, B.FILE_SN, B.FILE_STRE_COURS, B.STRE_FILE_NM, B.ORIGNL_FILE_NM
+	         , B.FILE_EXTSN, B.FILE_CN, B.FILE_SIZE
+		FROM  BOOK A LEFT OUTER JOIN ATCH_FILE_DETAIL B ON(A.BOOK_ID = B.ATCH_FILE_ID)
+		WHERE  A.BOOK_ID = #{bookId}
+	</select>
+	
+	<!-- 책 수정하기. update태그는 update 쿼리를 실행하기 위한 마이바티스 태그 -->
+	<!-- BookVO(bookId=15, title=개똥이15, 
+		 category=소설15, price=1500, insertDate=null, content=<p>ㅁㄴㅇㄹ</p>) 
+	-->
+	<update id="updatePost" parameterType="bookVO">
+		UPDATE BOOK
+		SET    TITLE=#{title}, CATEGORY=#{category}
+		     , PRICE=#{price},CONTENT=#{content}
+		WHERE  BOOK_ID = #{bookId}
+	</update>
+	
+	<!-- 
+	도서 삭제. delete 태그는 삭제 쿼리를 실행하기 위한 mybatis 태그
+	
+	BookVO(bookId=14, title=제목14, 
+	category=카테고리14, price=14000, insertDate=null, content=)
+	 -->
+	<delete id="deletePost" parameterType="bookVO">
+		DELETE FROM BOOK
+		WHERE  BOOK_ID = #{bookId}
+	</delete>
+	
+	<!-- 도서 목록 -->
+	<!-- 
+	{"keyword":"개똥이","currentPage":1}
+	 -->
+	<select id="list" parameterType="hashMap" resultType="bookVO">
+		SELECT T.*
+		FROM
+		(
+			SELECT ROW_NUMBER() OVER(ORDER BY BOOK_ID DESC) RNUM 
+				 , BOOK_ID, TITLE, CATEGORY, PRICE, INSERT_DATE, CONTENT
+			FROM  BOOK
+			WHERE 1 = 1
+			<include refid="where"></include>
+		) T
+		WHERE T.RNUM BETWEEN (#{currentPage} * 10) - (10 - 1) and (#{currentPage} * 10)
+	</select>
+	
+	<select id="getTotal" parameterType="hashMap" resultType="int">
+		SELECT COUNT(*) 
+		FROM   BOOK
+		WHERE  1 = 1
+		<include refid="where"></include>
+	</select>
+	
+	<!-- 기본키 값 가져오기 -->
+	<select id="getBookId" resultType="String">
+		SELECT 'BK' || NVL(TRIM(TO_CHAR(SUBSTR(MAX(BOOK_ID),3) + 1,'0000')),'0001')
+		FROM   BOOK
+	</select>
+</mapper>
+
+
+
+
+
+
+
+

@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="employee">
+	<!-- 반복되는 조건을 따로 빼냄 -->
+	<sql id="where">
+		<if test="keyword!=null and keyword!=''">
+	        AND    (   E_NAME  LIKE '%'||#{keyword}||'%' 
+	                OR E_TELNO LIKE '%'||#{keyword}||'%' 
+	                OR E_DEPT  LIKE '%'||#{keyword}||'%')
+	    </if>
+	</sql>
+	<!-- 
+	EmployeeVO(eEmpno=null, eName=1, eAddress=2, eTelno=3
+			, ePosition=사원, eDept=개발부)
+	EmployeeVO(eEmpno=E001, eName=1, eAddress=2, eTelno=3
+			, ePosition=사원, eDept=개발부)
+	-->
+	<insert id="createPost" parameterType="employeeVO">
+		<selectKey resultType="String" order="BEFORE" keyProperty="eEmpno">
+			SELECT 'E' || TRIM(TO_CHAR(SUBSTR(MAX(E_EMPNO),2) + 1,'000'))
+			FROM  EMPLOYEE
+		</selectKey>
+	
+		INSERT INTO EMPLOYEE(E_EMPNO, E_NAME, E_ADDRESS, E_TELNO, E_POSITION
+				, E_DEPT, POST_NUM, E_ADDRESS2)
+		VALUES(#{eEmpno},#{eName},#{eAddress},#{eTelno},#{ePosition}
+				, #{eDept}, #{postNum}, #{eAddress2} )
+	</insert>
+	
+	<resultMap type="employeeVO" id="employeeMap">
+		<result property="eEmpno" column="E_EMPNO"/>
+		<result property="eName" column="E_NAME"/>
+		<result property="eAddress" column="E_ADDRESS"/>
+		<result property="eTelno" column="E_TELNO"/>
+		<result property="ePosition" column="E_POSITION"/>
+		<result property="eDept" column="E_DEPT"/>
+		<collection property="atchFileDetailVOList" resultMap="atchFileDetailMap"></collection>
+	</resultMap>
+	
+	<resultMap type="atchFileDetailVO" id="atchFileDetailMap">
+		<result property="atchFileId" column="ATCH_FILE_ID"/>
+		<result property="fileSn" column="FILE_SN"/>
+		<result property="fileStreCours" column="FILE_STRE_COURS"/>
+		<result property="streFileNm" column="STRE_FILE_NM"/>
+		<result property="orignlFileNm" column="ORIGNL_FILE_NM"/>
+		<result property="fileExtsn" column="FILE_EXTSN"/>
+		<result property="fileCn" column="FILE_CN"/>
+		<result property="fileSize" column="FILE_SIZE"/>
+	</resultMap>
+	<!-- 
+	employeeVO[eEmpno=E001,eName=null,eAddress=null,eTelno=null,
+		ePosition=null,eDept=null]
+	-->
+	<select id="detail" parameterType="employeeVO" resultMap="employeeMap">
+		SELECT A.E_EMPNO, A.E_NAME, A.E_ADDRESS, A.E_TELNO, A.E_POSITION, A.E_DEPT
+	         , B.ATCH_FILE_ID, B.FILE_SN, B.FILE_STRE_COURS, B.STRE_FILE_NM, B.ORIGNL_FILE_NM
+	         , B.FILE_EXTSN, B.FILE_CN, B.FILE_SIZE
+		FROM   EMPLOYEE A LEFT OUTER JOIN ATCH_FILE_DETAIL B ON(A.E_EMPNO = B.ATCH_FILE_ID)
+		WHERE  A.E_EMPNO = #{eEmpno}
+	</select>
+	
+	<!-- 
+	employeeVO{eEmpno=E011,eName=개똥이2,eAddress=대전2,eTelno=010-123-1232,
+				ePosition=부장,eDept=영업부}
+	-->
+	<update id="updatePost" parameterType="employeeVO">
+		UPDATE EMPLOYEE
+		SET    E_NAME = #{eName}, E_ADDRESS = #{eAddress}, E_TELNO = #{eTelno}
+			 , E_POSITION = #{ePosition}, E_DEPT = #{eDept}
+		WHERE  E_EMPNO = #{eEmpno}
+	</update>
+	
+	<!-- 
+	employeeVO{eEmpno=E011,eName=개똥이2,eAddress=대전2,eTelno=010-123-1232,
+				ePosition=부장,eDept=영업부}
+	 -->
+	<delete id="deletePost" parameterType="employeeVO">
+		DELETE FROM EMPLOYEE
+		WHERE  E_EMPNO = #{eEmpno}
+	</delete>
+	
+	<!-- 
+	{"keyword":"","currentPage":"1"}
+	-->
+	<select id="list" parameterType="hashMap" resultType="employeeVO">
+		SELECT T.*
+		FROM 
+		(
+		    SELECT ROW_NUMBER() OVER(ORDER BY E_EMPNO DESC) RNUM
+		             ,E_EMPNO, E_NAME, E_ADDRESS, E_TELNO, E_POSITION, E_DEPT
+		    FROM  EMPLOYEE
+		    WHERE 1 = 1
+		    <include refid="where"></include>
+		) T
+		WHERE T.RNUM BETWEEN (#{currentPage} * 10) - (10 - 1) AND (#{currentPage} * 10)
+	</select>
+	
+	<!-- total : 직원의 수(검색 포함) -->
+	<!-- 
+	{"keyword":"","currentPage":"1"}
+	-->
+	<select id="getTotal" parameterType="hashMap" resultType="int">
+		SELECT COUNT(*) FROM EMPLOYEE
+		WHERE 1 = 1
+		<include refid="where"></include>
+	</select>
+</mapper>
+
+
+
+
+
+
+
+
+
+
