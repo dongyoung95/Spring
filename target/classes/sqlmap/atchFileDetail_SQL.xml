@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="atchFileDetail">
+	
+	<!-- ATCH_FILE_DETAIL 테이블에 insert
+	파라미터 : AtchFileDetailVO[atchFileId=BS0757, fileSn=0 ...
+	 -->
+	<insert id="insertAtchFileDetail" parameterType="atchFileDetailVO">
+		<selectKey resultType="int" order="BEFORE" keyProperty="fileSn">
+			SELECT NVL(MAX(FILE_SN),0)+1 FROM ATCH_FILE_DETAIL
+				WHERE ATCH_FILE_ID = #{atchFileId}
+		</selectKey>
+	
+		INSERT INTO ATCH_FILE_DETAIL(ATCH_FILE_ID, FILE_SN, FILE_STRE_COURS,
+		    STRE_FILE_NM, ORIGNL_FILE_NM, FILE_EXTSN, FILE_CN, FILE_SIZE)
+		VALUES(#{atchFileId},#{fileSn},#{fileStreCours},#{streFileNm},
+			   #{orignlFileNm},#{fileExtsn},#{fileCn},#{fileSize})
+	</insert>
+	
+</mapper>

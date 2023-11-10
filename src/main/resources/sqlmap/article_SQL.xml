@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mapper.ArticleMapper">
+
+
+	<insert id="createPost" parameterType="articleVO">
+		INSERT INTO ARTICLE (ARTICLE_NO, WRITER_ID, WRITER_NAME, TITLE)
+			VALUES(#{articleNo}, #{writerId}, #{writerName}, #{title})
+	</insert>
+
+
+
+
+
+
+
+	<select id="getArticleNo" resultType="String">
+		SELECT NVL(MAX(ARTICLE_NO),0)+1 FROM ARTICLE
+	</select>
+	
+	
+	<resultMap type="articleVO" id="articleMap">
+		<result property="articleNo" column="ARTICLE_NO"/>
+		<result property="writerId" column="WRITER_ID"/>
+		<result property="writerName" column="WRITER_NAME"/>
+		<result property="title" column="TITLE"/>
+		<result property="artContent" column="ART_CONTENT"/>
+		<result property="regdate" column="REGDATE"/>
+		<result property="moddate" column="MODDATE"/>
+		<result property="readCnt" column="READ_CNT"/>
+		
+		<collection property="atchFileDetailVOList" resultMap="atchFileDetailMap"></collection>
+	</resultMap>
+	
+	<resultMap type="atchFileDetailVO" id="atchFileDetailMap">
+		<result property="atchFileId" column="ATCH_FILE_ID"/>
+		<result property="fileSn" column="FILE_SN"/>
+		<result property="fileStreCours" column="FILE_STRE_COURS"/>
+		<result property="streFileNm" column="STRE_FILE_NM"/>
+		<result property="orignlFileNm" column="ORIGNL_FILE_NM"/>
+		<result property="fileExtsn" column="FILE_EXTSN"/>
+		<result property="fileCn" column="FILE_CN"/>
+		<result property="fileSize" column="FILE_SIZE"/>
+	</resultMap>
+	
+	<select id="detail" parameterType="String" resultMap="articleMap">
+		SELECT  A.ARTICLE_NO, A.WRITER_ID, A.WRITER_NAME, A.TITLE, A.ART_CONTENT
+		        , A.REGDATE, A.MODDATE, A.READ_CNT
+		        , B.ATCH_FILE_ID, B.FILE_SN, B.FILE_STRE_COURS, B.STRE_FILE_NM
+				, B.ORIGNL_FILE_NM, B.FILE_EXTSN, B.FILE_CN, B.FILE_SIZE
+				FROM ARTICLE A LEFT OUTER JOIN ATCH_FILE_DETAIL B ON(A.ARTICLE_NO = B.ATCH_FILE_ID)
+		WHERE A.ARTICLE_NO = #{articleNo}
+	</select>
+
+</mapper>
