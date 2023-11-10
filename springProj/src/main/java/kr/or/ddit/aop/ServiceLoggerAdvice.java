@@ -17,7 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 Aspect(애스팩트) : AOP의 단위가 되는 횡단 관심사
 - 횡단 관심사(Cross-Cutting Concern) : 핵심(core) 비즈니스 로직(삼겹살구워먹기, 빵또아의 아이스크림)과
           다소 거리가 있지만,
-         여러 모듈에서 공통적이고 반복적인 처리를 요구하는 내용(불판닦기, sad불판교체, 빵또아의 빵)
+         여러 모듈에서 공통적이고 반복적인 처리를 요구하는 내용(불판닦기, 불판교체, 빵또아의 빵)
 - 횡단 관심사 분리(Separation Of Cross-Cutting Concern) : 횡단 관심사에 해당하는 
          부분(불판닦기, 불판교체, 빵또아의 빵)을 분리해서 한 곳으로 모으는 것을 의미
 - Component : 골뱅이Aspect와 짝궁. component-scan시 "여기 봐주세요"라는 의미
